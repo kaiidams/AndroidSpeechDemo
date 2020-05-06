@@ -63,9 +63,20 @@ public class RecognizerIntentFragment extends Fragment {
 
         switch (requestCode) {
             case RESULT_SPEECH:
-                if (resultCode == Activity.RESULT_OK && null != data) {
-                    List<String> text = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
-                    textView.setText(text.get(0));
+                if (resultCode == Activity.RESULT_OK) {
+                    if (data != null) {
+                        List<String> texts = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+                        StringBuilder sb = new StringBuilder();
+                        for (int i = 0; i < texts.size(); i++) {
+                            sb.append(String.format("Result %d: %s\n", i, texts.get(0)));
+                        }
+                        textView.setText(sb);
+                    } else {
+                        textView.setText("No results");
+                    }
+                } else {
+                    String text = String.format("Error: %d", resultCode);
+                    textView.setText(text);
                 }
                 break;
         }

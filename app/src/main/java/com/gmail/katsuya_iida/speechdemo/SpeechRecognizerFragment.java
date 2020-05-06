@@ -3,6 +3,7 @@ package com.gmail.katsuya_iida.speechdemo;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.speech.RecognitionListener;
@@ -25,8 +26,9 @@ public class SpeechRecognizerFragment extends Fragment {
 
     private static final int REQUEST_RECORD_AUDIO = 1;
 
-    private SpeechRecognizer sr;
+    private SpeechRecognizer speechRecognizer;
     private EditText textView;
+    private View indicatorView;
 
     @Nullable
     @Override
@@ -40,22 +42,21 @@ public class SpeechRecognizerFragment extends Fragment {
 
         ImageButton speakButton = view.findViewById(R.id.button_speak);
         textView = view.findViewById(R.id.text);
+        indicatorView = view.findViewById(R.id.indicator);
 
         speakButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-                // Intent intent = new Intent(RecognizerIntent.ACTION_WEB_SEARCH);
-                // Intent intent = new Intent(RecognizerIntent.ACTION_WEB_SEARCH);
                 intent.putExtra(
                         RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                        "en-US" //RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
-                );
-                //intent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE,"com.tkjelectronics.voice");
-                // intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,5);
-                //intent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE,"com.tkjelectronics.voice");
-                // intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,5);
-                sr.startListening(intent);
+                        RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                intent.putExtra(
+                        RecognizerIntent.EXTRA_LANGUAGE, "ja-JP");
+                intent.putExtra(
+                        RecognizerIntent.EXTRA_PARTIAL_RESULTS,
+                        true);
+                speechRecognizer.startListening(intent);
             }
         });
 
@@ -73,7 +74,7 @@ public class SpeechRecognizerFragment extends Fragment {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
         if (requestCode == REQUEST_RECORD_AUDIO && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            Toast.makeText(getContext(), "Granted", Toast.LENGTH_LONG).show();
+            Toast.makeText(getContext(), "Permission granted", Toast.LENGTH_LONG).show();
         }
     }
 
@@ -81,12 +82,12 @@ public class SpeechRecognizerFragment extends Fragment {
     public void onResume() {
         super.onResume();
 
-        if(sr == null) {
-            sr = SpeechRecognizer.createSpeechRecognizer(getContext());
+        if(speechRecognizer == null) {
+            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(getContext());
             if (!SpeechRecognizer.isRecognitionAvailable(getContext())) {
                 Toast.makeText(getContext(),"Speech Recognition is not available",Toast.LENGTH_LONG).show();
             }
-            sr.setRecognitionListener(recognitionListener);
+            speechRecognizer.setRecognitionListener(recognitionListener);
         }
     }
 
@@ -99,8 +100,7 @@ public class SpeechRecognizerFragment extends Fragment {
 
         @Override
         public void onBeginningOfSpeech() {
-            //TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-            Toast.makeText(getContext(), "hello", Toast.LENGTH_LONG).show();
+            indicatorView.setBackgroundColor(Color.GREEN);
         }
 
         @Override
@@ -117,35 +117,42 @@ public class SpeechRecognizerFragment extends Fragment {
 
         @Override
         public void onEndOfSpeech() {
-            //TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-            Toast.makeText(getContext(), "hello", Toast.LENGTH_LONG).show();
+            indicatorView.setBackgroundColor(Color.TRANSPARENT);
         }
 
         @Override
         public void onError(int error) {
+            indicatorView.setBackgroundColor(Color.RED);
             String msg = String.format("Error %d", error);
             Toast.makeText(getContext(), msg, Toast.LENGTH_LONG).show();
         }
 
         @Override
         public void onResults(Bundle results) {
+            updateResult(results);
+        }
+
+        @Override
+        public void onPartialResults(Bundle partialResults) {
+            updateResult(partialResults);
+        }
+
+        private void updateResult(Bundle results) {
             List<String> matches =
                     results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
             float[] value =
                     results.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES);
             StringBuilder sb = new StringBuilder();
-            sb.append("Results: " + matches.size() + "\n");
             if (value != null) { // CONFIDENCE_SCORES wasn't added until API level 14
-                for (int i = 0; i < matches.size(); i++)  // The size of the data and value is the same
-                sb.append(matches.get(0) + "\nScore: " + value[i] + "\n");
+                for (int i = 0; i < matches.size(); i++) {
+                    sb.append(String.format("%s\nScore: %g\n", matches.get(i), value[i]));
+                }
+            } else {
+                for (int i = 0; i < matches.size(); i++) {
+                    sb.append(String.format("%s\n", matches.get(i)));
+                }
             }
             textView.setText(sb);
-        }
-
-        @Override
-        public void onPartialResults(Bundle partialResults) {
-            //TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-            Toast.makeText(getContext(), "hello", Toast.LENGTH_LONG).show();
         }
 
         @Override
